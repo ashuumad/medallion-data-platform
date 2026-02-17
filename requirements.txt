@@ -1,0 +1,27 @@
+# ============================================
+# Python dependencies for Medallion Data Repo
+# Install with: pip3.11 install -r requirements.txt
+# ============================================
+
+# dbt Core + DuckDB adapter
+dbt-core==1.6.6
+dbt-duckdb==1.6.2          # local development (no Azure needed)
+
+# Dagster orchestrator
+dagster==1.5.0
+dagster-webserver==1.5.0   # the visual UI
+dagster-dbt==0.21.0        # dagster + dbt integration (requires dbt-core <1.7)
+
+# Data processing
+duckdb==0.9.2
+pandas==2.1.0
+
+# Azure SDK (needed when connecting to real Azure storage)
+azure-storage-file-datalake==12.14.0
+azure-identity==1.15.0
+
+# Data quality
+great-expectations==0.18.0
+
+# Utilities
+python-dotenv==1.0.0       # loads secrets from .env file

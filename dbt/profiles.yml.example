@@ -1,0 +1,26 @@
+# ============================================================
+# profiles.yml — database connection settings
+# ============================================================
+# Place this file at: ~/.dbt/profiles.yml
+# (NOT inside your repo — it may contain credentials)
+#
+# We use DuckDB locally (free, no server needed)
+# and can switch to Azure later.
+# ============================================================
+
+medallion:
+  target: dev
+
+  outputs:
+
+    # ── Local development with DuckDB (free, no cloud needed) ──
+    dev:
+      type: duckdb
+      path: '../data/medallion.duckdb'    # local database file
+      threads: 4
+
+    # ── Azure production (uncomment when ready) ──
+    # prod:
+    #   type: duckdb
+    #   path: 'abfss://medallion@YOUR_STORAGE.dfs.core.windows.net/dbt.duckdb'
+    #   threads: 4

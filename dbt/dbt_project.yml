@@ -1,0 +1,47 @@
+# ============================================================
+# dbt_project.yml — dbt project configuration
+# ============================================================
+# This is the main config file for dbt.
+# It declares project settings and how models behave.
+# ============================================================
+
+name: 'medallion'
+version: '1.0.0'
+config-version: 2
+
+profile: 'medallion'        # references profiles.yml
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+analysis-paths: ["analyses"]
+macro-paths: ["macros"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# ─────────────────────────────────────────
+# Model configurations by layer
+# ─────────────────────────────────────────
+models:
+  medallion:
+
+    # 🟤 Bronze — raw data, minimal transformation
+    bronze:
+      +materialized: table       # saved as a permanent table
+      +schema: bronze
+      +tags: ['bronze']
+
+    # ⚪ Silver — cleaned and validated
+    silver:
+      +materialized: table
+      +schema: silver
+      +tags: ['silver']
+
+    # 🟡 Gold — business-ready aggregations
+    gold:
+      +materialized: table
+      +schema: gold
+      +tags: ['gold']

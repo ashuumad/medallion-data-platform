@@ -1,0 +1,13 @@
+# ============================================================
+# terraform.tfvars.example
+# ============================================================
+# INSTRUCTIONS:
+# 1. Copy this file: cp terraform.tfvars.example terraform.tfvars
+# 2. Fill in YOUR values below
+# 3. NEVER commit terraform.tfvars to GitHub (it's in .gitignore)
+# ============================================================
+
+subscription_id = "PASTE-YOUR-AZURE-SUBSCRIPTION-ID-HERE"
+project_name    = "medallion"
+environment     = "dev"
+location        = "eastus"

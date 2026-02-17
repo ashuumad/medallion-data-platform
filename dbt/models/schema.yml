@@ -1,0 +1,68 @@
+# ============================================================
+# models/schema.yml — Data quality tests & documentation
+# ============================================================
+# dbt reads this file to:
+#   1. Document what each model/column does
+#   2. Automatically run data quality tests
+#
+# Run tests with: dbt test
+# ============================================================
+
+version: 2
+
+models:
+
+  # ── 🟤 BRONZE ───────────────────────────────────────────────
+  - name: bronze_orders
+    description: "Raw orders data ingested from source systems. No transformations applied."
+    columns:
+      - name: order_id
+        description: "Unique identifier for each order"
+        tests:
+          - not_null
+      - name: customer_id
+        description: "ID of the customer who placed the order"
+        tests:
+          - not_null
+      - name: order_date
+        description: "Date the order was placed"
+        tests:
+          - not_null
+      - name: status
+        description: "Raw order status from source system"
+
+  # ── ⚪ SILVER ───────────────────────────────────────────────
+  - name: silver_orders
+    description: "Cleaned and validated orders. Duplicates removed, types corrected."
+    columns:
+      - name: order_id
+        description: "Unique order ID — must be unique and present"
+        tests:
+          - not_null
+          - unique                       # no duplicates allowed!
+      - name: quantity
+        description: "Number of units ordered — must be positive"
+        tests:
+          - not_null
+      - name: unit_price
+        description: "Price per unit — must be positive"
+        tests:
+          - not_null
+      - name: status
+        description: "Standardized order status"
+        tests:
+          - accepted_values:
+              values: ['completed', 'pending', 'cancelled', 'unknown']
+
+  # ── 🟡 GOLD ─────────────────────────────────────────────────
+  - name: gold_sales_summary
+    description: "Daily sales aggregated by product. Used for dashboards and reporting."
+    columns:
+      - name: total_revenue
+        description: "Total revenue for this product on this day"
+        tests:
+          - not_null
+      - name: num_orders
+        description: "Number of completed orders"
+        tests:
+          - not_null
