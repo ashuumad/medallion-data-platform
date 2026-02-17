@@ -3,12 +3,12 @@
 tmp*/
 
 # macOS
-.DS_Store
+**/.DS_Store
 
 # Virtual environment
 .venv/
 
-# Python bytecode
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
@@ -16,14 +16,14 @@ __pycache__/
 # dbt generated
 dbt/target/
 dbt/logs/
-dbt/dbt_packages/
-dbt/profiles.yml
-
-# Terraform
-terraform/.terraform/
-terraform/*.tfstate
-terraform/*.tfstate.backup
-terraform/terraform.tfvars
 
 # Local database
 data/*.duckdb
+
+# Environment / secrets
+.env
+.env.*
+
+# Dagster home/storage
+dagster_home/
+.dagster/
