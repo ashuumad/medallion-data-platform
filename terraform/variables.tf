@@ -1,42 +1,54 @@
 # ============================================================
-# variables.tf — Input variables for the Medallion platform
-# ============================================================
-# These are like function parameters for your infrastructure.
-# Values come from terraform.tfvars (which you create locally
-# and NEVER commit to GitHub — it contains secrets).
+# terraform/variables.tf — Enterprise variables
 # ============================================================
 
 variable "subscription_id" {
-  description = "Your Azure Subscription ID (find it in Azure Portal)"
+  description = "Your Azure Subscription ID"
   type        = string
   sensitive   = true
 }
 
 variable "project_name" {
-  description = "Short name for this project — used in resource names (no spaces, lowercase)"
+  description = "Short project name — used in all resource names (max 8 chars)"
   type        = string
-  default     = "medallion"
+  default     = "medaln"
 
   validation {
-    condition     = length(var.project_name) <= 10
-    error_message = "Project name must be 10 characters or less (Azure storage account name limit)."
-  }
-}
-
-variable "environment" {
-  description = "Deployment environment"
-  type        = string
-  default     = "dev"
-
-  validation {
-    condition     = contains(["dev", "staging", "prod"], var.environment)
-    error_message = "Environment must be one of: dev, staging, prod."
+    condition     = length(var.project_name) <= 8
+    error_message = "Project name must be 8 characters or less (Azure storage name limit)."
   }
 }
 
 variable "location" {
-  description = "Azure region to deploy resources"
+  description = "Azure region"
   type        = string
   default     = "eastus"
-  # Other options: "westus2", "westeurope", "australiaeast"
+}
+
+# ── Environment-specific settings (auto-selected by workspace) ─
+variable "env_config" {
+  description = "Per-environment configuration"
+  type = map(object({
+    dbt_target        : string
+    retention_days    : number
+    enable_monitoring : bool
+  }))
+
+  default = {
+    dev = {
+      dbt_target        = "dev"
+      retention_days    = 7
+      enable_monitoring = false
+    }
+    qa = {
+      dbt_target        = "qa"
+      retention_days    = 14
+      enable_monitoring = true
+    }
+    prod = {
+      dbt_target        = "prod"
+      retention_days    = 90
+      enable_monitoring = true
+    }
+  }
 }

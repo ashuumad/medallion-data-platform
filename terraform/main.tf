@@ -1,12 +1,13 @@
 # ============================================================
-# main.tf — Azure Infrastructure for Medallion Data Platform
+# terraform/main.tf — Enterprise Medallion Platform
 # ============================================================
-# This file DECLARES what Azure resources you want.
-# Terraform figures out HOW to create them.
+# Supports DEV / QA / PROD environments via Terraform workspaces
 #
-# To use:
-#   terraform init
-#   terraform plan
+# Usage:
+#   terraform workspace new dev
+#   terraform workspace new qa
+#   terraform workspace new prod
+#   terraform workspace select dev
 #   terraform apply
 # ============================================================
 
@@ -20,13 +21,17 @@ terraform {
     }
   }
 
-  # Store Terraform state in Azure (uncomment after first apply)
-  # backend "azurerm" {
-  #   resource_group_name  = "rg-medallion-tfstate"
-  #   storage_account_name = "stmedaliontfstate"
-  #   container_name       = "tfstate"
-  #   key                  = "terraform.tfstate"
-  # }
+  # Remote state — one container, separate state files per workspace
+  backend "azurerm" {
+    resource_group_name  = "rg-medallion-tfstate"
+    storage_account_name = "stmedtfstate"
+    container_name       = "tfstate"
+    key                  = "medallion.terraform.tfstate"
+    # Terraform automatically uses workspace name as prefix:
+    # e.g. dev/medallion.terraform.tfstate
+    #      qa/medallion.terraform.tfstate
+    #      prod/medallion.terraform.tfstate
+  }
 }
 
 provider "azurerm" {
@@ -34,42 +39,55 @@ provider "azurerm" {
   subscription_id = var.subscription_id
 }
 
-# ─────────────────────────────────────────
-# Resource Group — a logical container
-# ─────────────────────────────────────────
-resource "azurerm_resource_group" "medallion" {
-  name     = "rg-${var.project_name}-${var.environment}"
-  location = var.location
+# ── Current workspace (dev / qa / prod) ──────────────────────
+locals {
+  env         = terraform.workspace   # "dev", "qa", or "prod"
+  is_prod     = local.env == "prod"
 
-  tags = local.common_tags
+  common_tags = {
+    project     = var.project_name
+    environment = local.env
+    managed_by  = "terraform"
+  }
 }
 
-# ─────────────────────────────────────────
-# Storage Account — the data lake foundation
-# ─────────────────────────────────────────
+# ── Resource Group — one per environment ─────────────────────
+resource "azurerm_resource_group" "medallion" {
+  name     = "rg-${var.project_name}-${local.env}"
+  location = var.location
+  tags     = local.common_tags
+}
+
+# ── Storage Account — one per environment ────────────────────
 resource "azurerm_storage_account" "datalake" {
-  name                     = "st${var.project_name}${var.environment}"
+  name                     = "st${var.project_name}${local.env}"
   resource_group_name      = azurerm_resource_group.medallion.name
   location                 = azurerm_resource_group.medallion.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"          # Locally Redundant Storage (cheapest)
+  account_tier             = local.is_prod ? "Standard" : "Standard"
+  account_replication_type = local.is_prod ? "GRS" : "LRS"  # prod gets geo-redundancy
   account_kind             = "StorageV2"
-  is_hns_enabled           = true           # Enables Data Lake Gen2 (hierarchical namespace)
+  is_hns_enabled           = true   # Data Lake Gen2
+
+  # Prod gets soft delete protection
+  dynamic "blob_properties" {
+    for_each = local.is_prod ? [1] : []
+    content {
+      delete_retention_policy {
+        days = 30
+      }
+    }
+  }
 
   tags = local.common_tags
 }
 
-# ─────────────────────────────────────────
-# Data Lake Filesystem (container)
-# ─────────────────────────────────────────
+# ── Main Filesystem ───────────────────────────────────────────
 resource "azurerm_storage_data_lake_gen2_filesystem" "medallion" {
   name               = "medallion"
   storage_account_id = azurerm_storage_account.datalake.id
 }
 
-# ─────────────────────────────────────────
-# Medallion Layers — Bronze, Silver, Gold
-# ─────────────────────────────────────────
+# ── Medallion Layer Directories ───────────────────────────────
 resource "azurerm_storage_data_lake_gen2_path" "bronze" {
   path               = "bronze"
   filesystem_name    = azurerm_storage_data_lake_gen2_filesystem.medallion.name
@@ -91,13 +109,24 @@ resource "azurerm_storage_data_lake_gen2_path" "gold" {
   resource           = "directory"
 }
 
-# ─────────────────────────────────────────
-# Local values (reusable within this file)
-# ─────────────────────────────────────────
-locals {
-  common_tags = {
-    project     = var.project_name
-    environment = var.environment
-    managed_by  = "terraform"
-  }
+# ── Sub-directories per layer (organized by domain) ──────────
+resource "azurerm_storage_data_lake_gen2_path" "bronze_orders" {
+  path               = "bronze/orders"
+  filesystem_name    = azurerm_storage_data_lake_gen2_filesystem.medallion.name
+  storage_account_id = azurerm_storage_account.datalake.id
+  resource           = "directory"
+}
+
+resource "azurerm_storage_data_lake_gen2_path" "silver_orders" {
+  path               = "silver/orders"
+  filesystem_name    = azurerm_storage_data_lake_gen2_filesystem.medallion.name
+  storage_account_id = azurerm_storage_account.datalake.id
+  resource           = "directory"
+}
+
+resource "azurerm_storage_data_lake_gen2_path" "gold_sales" {
+  path               = "gold/sales"
+  filesystem_name    = azurerm_storage_data_lake_gen2_filesystem.medallion.name
+  storage_account_id = azurerm_storage_account.datalake.id
+  resource           = "directory"
 }

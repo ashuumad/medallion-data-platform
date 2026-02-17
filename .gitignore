@@ -8,9 +8,22 @@ tmp*/
 # Virtual environment
 .venv/
 
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
 # dbt generated
 dbt/target/
 dbt/logs/
+dbt/dbt_packages/
+dbt/profiles.yml
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/terraform.tfvars
 
 # Local database
 data/*.duckdb

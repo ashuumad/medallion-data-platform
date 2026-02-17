@@ -1,26 +1,36 @@
 # ============================================================
-# profiles.yml — database connection settings
+# ~/.dbt/profiles.yml — Enterprise multi-environment config
 # ============================================================
-# Place this file at: ~/.dbt/profiles.yml
-# (NOT inside your repo — it may contain credentials)
+# Copy this to ~/.dbt/profiles.yml (NOT inside your repo)
 #
-# We use DuckDB locally (free, no server needed)
-# and can switch to Azure later.
+# Targets match Terraform workspaces:
+#   dbt run --target dev   → uses DEV storage
+#   dbt run --target qa    → uses QA storage
+#   dbt run --target prod  → uses PROD storage
 # ============================================================
 
 medallion:
-  target: dev
+  target: dev   # default target when none specified
 
   outputs:
 
-    # ── Local development with DuckDB (free, no cloud needed) ──
+    # ── LOCAL DEVELOPMENT (no Azure needed) ──────────────────
     dev:
       type: duckdb
-      path: '../data/medallion.duckdb'    # local database file
+      path: '../data/medallion_dev.duckdb'
       threads: 4
+      schema: main    # dbt will prefix: bronze_dev, silver_dev, gold_dev
 
-    # ── Azure production (uncomment when ready) ──
-    # prod:
-    #   type: duckdb
-    #   path: 'abfss://medallion@YOUR_STORAGE.dfs.core.windows.net/dbt.duckdb'
-    #   threads: 4
+    # ── QA ENVIRONMENT (Azure) ───────────────────────────────
+    qa:
+      type: duckdb
+      path: 'abfss://medallion@stmedalnqa.dfs.core.windows.net/dbt.duckdb'
+      threads: 4
+      schema: main
+
+    # ── PRODUCTION ENVIRONMENT (Azure) ───────────────────────
+    prod:
+      type: duckdb
+      path: 'abfss://medallion@stmedalnprod.dfs.core.windows.net/dbt.duckdb'
+      threads: 8      # more threads in prod for performance
+      schema: main

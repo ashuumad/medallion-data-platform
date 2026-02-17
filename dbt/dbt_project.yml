@@ -1,20 +1,16 @@
 # ============================================================
-# dbt_project.yml — dbt project configuration
-# ============================================================
-# This is the main config file for dbt.
-# It declares project settings and how models behave.
+# dbt/dbt_project.yml — Enterprise multi-environment config
 # ============================================================
 
 name: 'medallion'
 version: '1.0.0'
 config-version: 2
 
-profile: 'medallion'        # references profiles.yml
+profile: 'medallion'
 
 model-paths: ["models"]
 seed-paths: ["seeds"]
 test-paths: ["tests"]
-analysis-paths: ["analyses"]
 macro-paths: ["macros"]
 
 target-path: "target"
@@ -22,26 +18,29 @@ clean-targets:
   - "target"
   - "dbt_packages"
 
-# ─────────────────────────────────────────
-# Model configurations by layer
-# ─────────────────────────────────────────
+# ── Model configurations ──────────────────────────────────────
 models:
   medallion:
 
-    # 🟤 Bronze — raw data, minimal transformation
+    # 🟤 Bronze — raw ingestion
     bronze:
-      +materialized: table       # saved as a permanent table
-      +schema: bronze
+      +materialized: table
+      +schema: bronze          # becomes bronze_dev / bronze_qa / bronze_prod
       +tags: ['bronze']
 
-    # ⚪ Silver — cleaned and validated
+    # ⚪ Silver — cleaned data
     silver:
       +materialized: table
-      +schema: silver
+      +schema: silver          # becomes silver_dev / silver_qa / silver_prod
       +tags: ['silver']
 
-    # 🟡 Gold — business-ready aggregations
+    # 🟡 Gold — business ready
     gold:
       +materialized: table
-      +schema: gold
+      +schema: gold            # becomes gold_dev / gold_qa / gold_prod
       +tags: ['gold']
+
+# ── Seeds ─────────────────────────────────────────────────────
+seeds:
+  medallion:
+    +schema: raw               # raw_dev / raw_qa / raw_prod
