@@ -1,0 +1,16 @@
+
+# Dagster temp folders
+tmp*/
+
+# macOS
+.DS_Store
+
+# Virtual environment
+.venv/
+
+# dbt generated
+dbt/target/
+dbt/logs/
+
+# Local database
+data/*.duckdb
