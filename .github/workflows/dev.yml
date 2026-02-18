@@ -1,0 +1,90 @@
+# ============================================================
+# DEV Pipeline — auto-runs on every feature/* push
+# No approval gate — fast feedback for developers
+# ============================================================
+name: "🔧 DEV Pipeline"
+
+on:
+  push:
+    branches:
+      - "feature/**"
+
+env:
+  TF_VERSION: "1.5.0"
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  deploy-dev:
+    name: Deploy to DEV
+    runs-on: ubuntu-latest
+    environment: dev       # No approval required (configure in GitHub Settings)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Azure Auth ──────────────────────────────────────────
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # ── Terraform — provision DEV infra ────────────────────
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init & Apply (dev)
+        working-directory: terraform
+        env:
+          ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
+          ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
+          ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform init
+          terraform workspace select dev || terraform workspace new dev
+          terraform apply -auto-approve \
+            -var="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
+      # ── Python + dbt ────────────────────────────────────────
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Setup dbt profiles (dev — local DuckDB)
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << 'EOF'
+          medallion:
+            target: dev
+            outputs:
+              dev:
+                type: duckdb
+                path: '/tmp/medallion_dev.duckdb'
+                threads: 4
+                schema: main
+          EOF
+
+      - name: dbt run & test (dev)
+        working-directory: dbt
+        run: |
+          dbt run --target dev
+          dbt test --target dev
+
+      # ── Dagster pipeline ────────────────────────────────────
+      - name: Run Dagster pipeline (dev)
+        env:
+          AZURE_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
+          AZURE_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
+          AZURE_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
+          DAGSTER_HOME: /tmp/dagster_home
+        run: |
+          mkdir -p $DAGSTER_HOME
+          dagster job execute -m dagster_pipeline -j medallion_pipeline

@@ -1,0 +1,104 @@
+# ============================================================
+# PROD Pipeline — runs when a PR is merged into main
+# Requires reviewer approval + 5-minute wait timer
+# Uses a separate service principal for production isolation
+# ============================================================
+name: "🚀 PROD Pipeline"
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  TF_VERSION: "1.5.0"
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  deploy-prod:
+    name: Deploy to PROD
+    runs-on: ubuntu-latest
+    environment: prod      # Requires approval + wait timer (GitHub Settings → Environments)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Azure Auth (dedicated PROD service principal) ───────
+      - name: Azure Login (prod)
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_PROD }}
+
+      # ── Terraform — provision PROD infra ───────────────────
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init & Apply (prod)
+        working-directory: terraform
+        env:
+          ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS_PROD).clientId }}
+          ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS_PROD).clientSecret }}
+          ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS_PROD).tenantId }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_PROD }}
+        run: |
+          terraform init
+          terraform workspace select prod || terraform workspace new prod
+          terraform apply -auto-approve \
+            -var="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID_PROD }}"
+
+      # ── Python + dbt ────────────────────────────────────────
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Setup dbt profiles (prod — Azure ADLS)
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << 'EOF'
+          medallion:
+            target: prod
+            outputs:
+              prod:
+                type: duckdb
+                path: 'abfss://medallion@stmedalnprod.dfs.core.windows.net/dbt.duckdb'
+                threads: 8
+                schema: main
+          EOF
+
+      - name: dbt run & test (prod)
+        working-directory: dbt
+        env:
+          AZURE_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS_PROD).clientId }}
+          AZURE_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS_PROD).clientSecret }}
+          AZURE_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS_PROD).tenantId }}
+        run: |
+          dbt run --target prod
+          dbt test --target prod
+
+      # ── Dagster pipeline ────────────────────────────────────
+      - name: Run Dagster pipeline (prod)
+        env:
+          AZURE_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS_PROD).clientId }}
+          AZURE_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS_PROD).clientSecret }}
+          AZURE_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS_PROD).tenantId }}
+          DAGSTER_HOME: /tmp/dagster_home
+        run: |
+          mkdir -p $DAGSTER_HOME
+          dagster job execute -m dagster_pipeline -j medallion_pipeline
+
+      # ── Tag the release ─────────────────────────────────────
+      - name: Tag production release
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          TAG="prod-$(date +'%Y%m%d-%H%M%S')"
+          git tag $TAG
+          git push origin $TAG

@@ -24,7 +24,7 @@ terraform {
   # Remote state — one container, separate state files per workspace
   backend "azurerm" {
     resource_group_name  = "rg-medallion-tfstate"
-    storage_account_name = "stmedtfstate"
+    storage_account_name = "stmedtfstateaa"
     container_name       = "tfstate"
     key                  = "medallion.terraform.tfstate"
     # Terraform automatically uses workspace name as prefix:

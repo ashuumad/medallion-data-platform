@@ -4,6 +4,38 @@
 # Follow these steps to enable the full DEV → QA → PROD flow
 # ============================================================
 
+## Step 0: Create an Azure Account & Subscription
+
+### Option A — Free Account (recommended for learning/dev)
+  1. Go to https://azure.microsoft.com/free/
+  2. Sign up with a Microsoft account
+     → You get $200 credit for 30 days + 12 months of free services
+  3. After sign-up, open Azure Portal: https://portal.azure.com
+
+### Option B — Pay-As-You-Go (for production workloads)
+  1. Go to https://azure.microsoft.com/pricing/purchase-options/pay-as-you-go/
+  2. Link a credit card — you only pay for what you use
+
+### Install & authenticate the Azure CLI
+  # Install (macOS)
+  brew install azure-cli
+
+  # Log in
+  az login
+
+  # Confirm your subscription is active
+  az account show
+
+  # Copy your Subscription ID — you'll need it in the steps below
+  az account show --query id -o tsv
+
+### (Optional) Create a dedicated subscription for this project
+  # Enterprise best practice: isolate workloads in separate subscriptions
+  # Requires an Azure AD account with billing permissions
+  az account create \
+    --display-name "Medallion Data Platform" \
+    --offer-type MS-AZR-0017P   # Pay-As-You-Go offer type
+
 ## Step 1: Set Up GitHub Environments (Approval Gates)
 
 Go to your GitHub repo:
@@ -68,17 +100,19 @@ Add these secrets:
 Before running Terraform for the first time, create the
 state storage manually (this stores Terraform's memory):
 
-  az group create --name rg-medallion-tfstate --location eastus
-  
+  az group create --name rg-medallion-tfstate --location centralus
+
   az storage account create \
-    --name stmedtfstate \
+    --name stmedtfstateaa \
     --resource-group rg-medallion-tfstate \
     --sku Standard_LRS \
-    --kind StorageV2
-  
+    --kind StorageV2 \
+    --location centralus
+
   az storage container create \
     --name tfstate \
-    --account-name stmedtfstate
+    --account-name stmedtfstateaa \
+    --auth-mode login
 
 ## Step 5: Initialize Terraform Workspaces
 
