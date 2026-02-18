@@ -63,7 +63,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Setup dbt profiles (prod — Azure ADLS)
+      - name: Setup dbt profiles (prod — local DuckDB)
         run: |
           mkdir -p ~/.dbt
           cat > ~/.dbt/profiles.yml << 'EOF'
@@ -72,7 +72,7 @@ jobs:
             outputs:
               prod:
                 type: duckdb
-                path: 'abfss://medallion@stmedalnprod.dfs.core.windows.net/dbt.duckdb'
+                path: '/tmp/medallion_prod.duckdb'
                 threads: 8
                 schema: main
           EOF
