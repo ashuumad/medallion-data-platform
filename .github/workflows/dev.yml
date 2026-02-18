@@ -79,6 +79,7 @@ jobs:
       - name: dbt run & test (dev)
         working-directory: dbt
         run: |
+          dbt seed --target dev
           dbt run --target dev
           dbt test --target dev
 

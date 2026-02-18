@@ -84,6 +84,7 @@ jobs:
           AZURE_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS_PROD).clientSecret }}
           AZURE_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS_PROD).tenantId }}
         run: |
+          dbt seed --target prod
           dbt run --target prod
           dbt test --target prod
 
