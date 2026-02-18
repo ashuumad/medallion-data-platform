@@ -23,6 +23,8 @@ jobs:
     name: Deploy to PROD
     runs-on: ubuntu-latest
     environment: prod      # Requires approval + wait timer (GitHub Settings → Environments)
+    permissions:
+      contents: write       # needed to push the prod-YYYYMMDD release tag
 
     steps:
       - name: Checkout
