@@ -84,6 +84,10 @@ jobs:
 
       - name: dbt run & test (dev)
         working-directory: dbt
+        env:
+          AZURE_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
+          AZURE_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
+          AZURE_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
         run: |
           dbt seed --target dev
           dbt run --target dev
