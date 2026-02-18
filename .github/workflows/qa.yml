@@ -19,6 +19,8 @@ jobs:
     name: Deploy to QA
     runs-on: ubuntu-latest
     environment: qa        # Requires reviewer approval (GitHub Settings → Environments)
+    permissions:
+      pull-requests: write  # needed to post PR comments
 
     steps:
       - name: Checkout
