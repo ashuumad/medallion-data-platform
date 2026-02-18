@@ -1,5 +1,9 @@
 -- Silver layer: cleaned and validated orders
-{{ config(materialized='table') }}
+{{ config(
+    materialized='external',
+    location='az://medallion/silver/orders/',
+    format='parquet'
+) }}
 
 select
     order_id,

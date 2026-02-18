@@ -110,6 +110,13 @@ resource "azurerm_storage_data_lake_gen2_path" "gold" {
 }
 
 # ── Sub-directories per layer (organized by domain) ──────────
+resource "azurerm_storage_data_lake_gen2_path" "bronze_customers" {
+  path               = "bronze/customers"
+  filesystem_name    = azurerm_storage_data_lake_gen2_filesystem.medallion.name
+  storage_account_id = azurerm_storage_account.datalake.id
+  resource           = "directory"
+}
+
 resource "azurerm_storage_data_lake_gen2_path" "bronze_orders" {
   path               = "bronze/orders"
   filesystem_name    = azurerm_storage_data_lake_gen2_filesystem.medallion.name

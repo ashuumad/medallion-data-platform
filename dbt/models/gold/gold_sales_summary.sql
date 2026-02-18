@@ -1,5 +1,9 @@
 -- Gold layer: daily sales summary by product
-{{ config(materialized='table') }}
+{{ config(
+    materialized='external',
+    location='az://medallion/gold/sales/',
+    format='parquet'
+) }}
 
 select
     order_date,

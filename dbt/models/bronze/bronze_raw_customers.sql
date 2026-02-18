@@ -1,6 +1,10 @@
 -- Bronze layer: raw customers loaded from seed
 -- No transformations — exact copy with ingestion timestamp
-{{ config(materialized='table') }}
+{{ config(
+    materialized='external',
+    location='az://medallion/bronze/customers/',
+    format='parquet'
+) }}
 
 select
     customer_id,

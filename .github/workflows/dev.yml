@@ -62,7 +62,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Setup dbt profiles (dev — local DuckDB)
+      - name: Setup dbt profiles (dev — DuckDB + Azure ADLS)
         run: |
           mkdir -p ~/.dbt
           cat > ~/.dbt/profiles.yml << 'EOF'
@@ -73,7 +73,13 @@ jobs:
                 type: duckdb
                 path: '/tmp/medallion_dev.duckdb'
                 threads: 4
-                schema: main
+                extensions:
+                  - azure
+                settings:
+                  azure_account_name: stmedalndev
+                  azure_client_id: "{{ env_var('AZURE_CLIENT_ID') }}"
+                  azure_client_secret: "{{ env_var('AZURE_CLIENT_SECRET') }}"
+                  azure_tenant_id: "{{ env_var('AZURE_TENANT_ID') }}"
           EOF
 
       - name: dbt run & test (dev)

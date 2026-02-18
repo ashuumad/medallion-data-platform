@@ -1,6 +1,10 @@
 -- Bronze layer: raw orders loaded from seed
 -- Materializes as-is with no transformations
-{{ config(materialized='table') }}
+{{ config(
+    materialized='external',
+    location='az://medallion/bronze/orders/',
+    format='parquet'
+) }}
 
 select
     order_id,
