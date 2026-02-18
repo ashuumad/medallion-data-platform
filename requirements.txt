@@ -11,6 +11,7 @@ dbt-duckdb==1.6.2          # local development (no Azure needed)
 dagster==1.5.0
 dagster-webserver==1.5.0   # the visual UI
 dagster-dbt==0.21.0        # dagster + dbt integration (requires dbt-core <1.7)
+pendulum<3                  # dagster 1.5.x requires pendulum 2.x (3.x removed Pendulum class)
 
 # Data processing
 duckdb==0.9.2
