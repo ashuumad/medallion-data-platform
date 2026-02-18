@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: bronze_raw_orders
+    description: "Raw orders loaded from seed CSV — no transformations"
+    columns:
+      - name: order_id
+        description: "Unique order identifier"
+        tests:
+          - not_null
+          - unique
+
+  - name: silver_orders
+    description: "Cleaned and validated orders with line totals"
+    columns:
+      - name: order_id
+        description: "Unique order identifier"
+        tests:
+          - not_null
+          - unique
+      - name: quantity
+        description: "Units ordered (always > 0)"
+        tests:
+          - not_null
+      - name: line_total
+        description: "quantity * unit_price"
+        tests:
+          - not_null
+
+  - name: gold_sales_summary
+    description: "Daily revenue summary by product for completed orders"
+    columns:
+      - name: order_date
+        tests:
+          - not_null
+      - name: product_name
+        tests:
+          - not_null
+      - name: total_revenue
+        tests:
+          - not_null
