@@ -2,7 +2,7 @@
 -- No transformations — exact copy with ingestion timestamp
 {{ config(
     materialized='external',
-    location='az://medallion/bronze/customers/',
+    location="abfss://medallion@" ~ var('adls_account') ~ ".dfs.core.windows.net/bronze/customers/",
     format='parquet'
 ) }}
 

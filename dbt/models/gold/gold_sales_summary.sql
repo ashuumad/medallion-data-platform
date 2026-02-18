@@ -1,7 +1,7 @@
 -- Gold layer: daily sales summary by product
 {{ config(
     materialized='external',
-    location='az://medallion/gold/sales/',
+    location="abfss://medallion@" ~ var('adls_account') ~ ".dfs.core.windows.net/gold/sales/",
     format='parquet'
 ) }}
 

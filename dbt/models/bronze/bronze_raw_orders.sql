@@ -2,7 +2,7 @@
 -- Materializes as-is with no transformations
 {{ config(
     materialized='external',
-    location='az://medallion/bronze/orders/',
+    location="abfss://medallion@" ~ var('adls_account') ~ ".dfs.core.windows.net/bronze/orders/",
     format='parquet'
 ) }}
 

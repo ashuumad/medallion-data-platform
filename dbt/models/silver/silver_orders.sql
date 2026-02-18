@@ -1,7 +1,7 @@
 -- Silver layer: cleaned and validated orders
 {{ config(
     materialized='external',
-    location='az://medallion/silver/orders/',
+    location="abfss://medallion@" ~ var('adls_account') ~ ".dfs.core.windows.net/silver/orders/",
     format='parquet'
 ) }}
 

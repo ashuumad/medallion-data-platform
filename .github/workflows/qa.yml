@@ -79,11 +79,6 @@ jobs:
                 threads: 4
                 extensions:
                   - azure
-                settings:
-                  azure_account_name: stmedalnqa
-                  azure_client_id: "{{ env_var('AZURE_CLIENT_ID') }}"
-                  azure_client_secret: "{{ env_var('AZURE_CLIENT_SECRET') }}"
-                  azure_tenant_id: "{{ env_var('AZURE_TENANT_ID') }}"
           EOF
 
       - name: dbt run & test (qa)
@@ -94,8 +89,8 @@ jobs:
           AZURE_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
         run: |
           dbt seed --target qa
-          dbt run --target qa
-          dbt test --target qa
+          dbt run --target qa --vars '{"adls_account": "stmedalnqa"}'
+          dbt test --target qa --vars '{"adls_account": "stmedalnqa"}'
 
       # ── Dagster pipeline ────────────────────────────────────
       - name: Run Dagster pipeline (qa)
