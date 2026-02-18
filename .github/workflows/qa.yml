@@ -1,0 +1,124 @@
+# ============================================================
+# QA Pipeline — runs when a PR is opened against main
+# Requires reviewer approval (configure via GitHub Environments)
+# ============================================================
+name: "🧪 QA Pipeline"
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+env:
+  TF_VERSION: "1.5.0"
+  PYTHON_VERSION: "3.11"
+
+concurrency:
+  group: terraform-qa
+  cancel-in-progress: false  # never cancel an in-progress QA deploy
+
+jobs:
+  deploy-qa:
+    name: Deploy to QA
+    runs-on: ubuntu-latest
+    environment: qa        # Requires reviewer approval (GitHub Settings → Environments)
+    permissions:
+      contents: read        # needed for checkout
+      pull-requests: write  # needed to post PR comments
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Azure Auth ──────────────────────────────────────────
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # ── Terraform — provision QA infra ─────────────────────
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init & Apply (qa)
+        working-directory: terraform
+        env:
+          ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
+          ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
+          ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform init
+          terraform workspace select qa || terraform workspace new qa
+          terraform apply -auto-approve \
+            -var="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
+      # ── Python + dbt ────────────────────────────────────────
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Setup dbt profiles (qa — local DuckDB)
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << 'EOF'
+          medallion:
+            target: qa
+            outputs:
+              qa:
+                type: duckdb
+                path: '/tmp/medallion_qa.duckdb'
+                threads: 4
+                schema: main
+          EOF
+
+      - name: dbt run & test (qa)
+        working-directory: dbt
+        env:
+          AZURE_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
+          AZURE_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
+          AZURE_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
+        run: |
+          dbt seed --target qa
+          dbt run --target qa
+          dbt test --target qa
+
+      # ── Dagster pipeline ────────────────────────────────────
+      - name: Run Dagster pipeline (qa)
+        env:
+          AZURE_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
+          AZURE_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
+          AZURE_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
+          DAGSTER_HOME: /tmp/dagster_home
+        run: |
+          mkdir -p $DAGSTER_HOME
+          dagster job execute -m dagster_pipeline -j medallion_pipeline
+
+      # ── Report results on the PR ────────────────────────────
+      - name: Post QA results to PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}';
+            const emoji = status === 'success' ? '✅' : '❌';
+            const body = `## ${emoji} QA Pipeline ${status}\n\n` +
+              `**Branch:** \`${{ github.head_ref }}\`\n` +
+              `**Run:** [View logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n` +
+              (status === 'success'
+                ? '🚀 QA passed — this PR is ready to merge to PROD.'
+                : '🛑 QA failed — review the logs and push a fix.');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
