@@ -99,7 +99,7 @@ jobs:
           DAGSTER_HOME: /tmp/dagster_home
         run: |
           mkdir -p $DAGSTER_HOME
-          dagster job execute -m dagster_pipeline -j medallion_pipeline_job
+          dagster job execute -m dagster_pipeline -j medallion_pipeline
 
       # ── Report results on the PR ────────────────────────────
       - name: Post QA results to PR
