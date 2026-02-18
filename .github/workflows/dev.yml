@@ -87,4 +87,4 @@ jobs:
           DAGSTER_HOME: /tmp/dagster_home
         run: |
           mkdir -p $DAGSTER_HOME
-          dagster job execute -m dagster_pipeline -j medallion_pipeline
+          dagster job execute -m dagster_pipeline -j medallion_pipeline_job
