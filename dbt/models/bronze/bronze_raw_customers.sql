@@ -1,6 +1,5 @@
 -- Bronze layer: raw customers loaded from seed
 -- No transformations — exact copy with ingestion timestamp
-{{ config(materialized='table') }}
 
 select
     customer_id,

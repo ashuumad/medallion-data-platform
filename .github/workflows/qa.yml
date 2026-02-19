@@ -82,14 +82,20 @@ jobs:
 
       - name: dbt run & test (qa)
         working-directory: dbt
-        env:
-          AZURE_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
-          AZURE_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
-          AZURE_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
         run: |
           dbt seed --target qa
           dbt run --target qa
           dbt test --target qa
+
+      # ── Export to Azure ADLS Gen2 ────────────────────────────
+      - name: Export Parquet files to ADLS (qa)
+        env:
+          AZURE_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
+          AZURE_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
+          AZURE_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
+          ADLS_ACCOUNT: stmedalnqa
+          DUCKDB_PATH: /tmp/medallion_qa.duckdb
+        run: python scripts/export_to_adls.py
 
       # ── Dagster pipeline ────────────────────────────────────
       - name: Run Dagster pipeline (qa)

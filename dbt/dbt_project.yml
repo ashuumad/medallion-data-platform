@@ -40,6 +40,10 @@ models:
       +schema: gold            # becomes gold_dev / gold_qa / gold_prod
       +tags: ['gold']
 
+# ── Variables ─────────────────────────────────────────────────
+vars:
+  adls_account: 'stmedalndev'   # override with --vars '{"adls_account": "stmedalnqa"}' per env
+
 # ── Seeds ─────────────────────────────────────────────────────
 seeds:
   medallion:

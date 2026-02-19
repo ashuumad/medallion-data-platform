@@ -1,6 +1,5 @@
 -- Bronze layer: raw orders loaded from seed
 -- Materializes as-is with no transformations
-{{ config(materialized='table') }}
 
 select
     order_id,

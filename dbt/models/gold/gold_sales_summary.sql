@@ -1,5 +1,4 @@
 -- Gold layer: daily sales summary by product
-{{ config(materialized='table') }}
 
 select
     order_date,

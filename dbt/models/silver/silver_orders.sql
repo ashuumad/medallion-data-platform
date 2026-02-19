@@ -1,5 +1,4 @@
 -- Silver layer: cleaned and validated orders
-{{ config(materialized='table') }}
 
 select
     order_id,
