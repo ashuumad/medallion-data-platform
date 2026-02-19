@@ -39,9 +39,6 @@ provider "azurerm" {
   subscription_id = var.subscription_id
 }
 
-# ── Current SPN identity (used for RBAC assignment below) ─────
-data "azurerm_client_config" "current" {}
-
 # ── Current workspace (dev / qa / prod) ──────────────────────
 locals {
   env         = terraform.workspace   # "dev", "qa", or "prod"
@@ -82,16 +79,6 @@ resource "azurerm_storage_account" "datalake" {
   }
 
   tags = local.common_tags
-}
-
-# ── RBAC: grant data-plane write access to the deploying SPN ──
-# Management-plane roles (Contributor) do NOT grant ADLS data access.
-# Storage Blob Data Contributor is required to read/write blobs and
-# ADLS Gen2 files using the service principal identity.
-resource "azurerm_role_assignment" "storage_data_contributor" {
-  scope                = azurerm_storage_account.datalake.id
-  role_definition_name = "Storage Blob Data Contributor"
-  principal_id         = data.azurerm_client_config.current.object_id
 }
 
 # ── Main Filesystem ───────────────────────────────────────────
