@@ -1,10 +1,5 @@
 -- Bronze layer: raw customers loaded from seed
 -- No transformations — exact copy with ingestion timestamp
-{{ config(
-    materialized='external',
-    location="abfss://medallion@" ~ var('adls_account') ~ ".dfs.core.windows.net/bronze/customers/",
-    format='parquet'
-) }}
 
 select
     customer_id,

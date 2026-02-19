@@ -1,9 +1,4 @@
 -- Silver layer: cleaned and validated orders
-{{ config(
-    materialized='external',
-    location="abfss://medallion@" ~ var('adls_account') ~ ".dfs.core.windows.net/silver/orders/",
-    format='parquet'
-) }}
 
 select
     order_id,

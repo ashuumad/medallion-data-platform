@@ -1,10 +1,5 @@
 -- Bronze layer: raw orders loaded from seed
 -- Materializes as-is with no transformations
-{{ config(
-    materialized='external',
-    location="abfss://medallion@" ~ var('adls_account') ~ ".dfs.core.windows.net/bronze/orders/",
-    format='parquet'
-) }}
 
 select
     order_id,

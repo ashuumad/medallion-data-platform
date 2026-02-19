@@ -66,7 +66,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Setup dbt profiles (qa — DuckDB + Azure ADLS)
+      - name: Setup dbt profiles (qa — local DuckDB)
         run: |
           mkdir -p ~/.dbt
           cat > ~/.dbt/profiles.yml << 'EOF'
@@ -77,20 +77,25 @@ jobs:
                 type: duckdb
                 path: '/tmp/medallion_qa.duckdb'
                 threads: 4
-                extensions:
-                  - azure
+                schema: main
           EOF
 
       - name: dbt run & test (qa)
         working-directory: dbt
+        run: |
+          dbt seed --target qa
+          dbt run --target qa
+          dbt test --target qa
+
+      # ── Export to Azure ADLS Gen2 ────────────────────────────
+      - name: Export Parquet files to ADLS (qa)
         env:
           AZURE_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
           AZURE_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
           AZURE_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
-        run: |
-          dbt seed --target qa
-          dbt run --target qa --vars '{"adls_account": "stmedalnqa"}'
-          dbt test --target qa --vars '{"adls_account": "stmedalnqa"}'
+          ADLS_ACCOUNT: stmedalnqa
+          DUCKDB_PATH: /tmp/medallion_qa.duckdb
+        run: python scripts/export_to_adls.py
 
       # ── Dagster pipeline ────────────────────────────────────
       - name: Run Dagster pipeline (qa)

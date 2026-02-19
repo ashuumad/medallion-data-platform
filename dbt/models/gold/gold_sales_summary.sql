@@ -1,9 +1,4 @@
 -- Gold layer: daily sales summary by product
-{{ config(
-    materialized='external',
-    location="abfss://medallion@" ~ var('adls_account') ~ ".dfs.core.windows.net/gold/sales/",
-    format='parquet'
-) }}
 
 select
     order_date,
